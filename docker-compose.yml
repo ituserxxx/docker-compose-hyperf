@@ -1,0 +1,74 @@
+version: '3'
+services:
+    mysql-dev:
+        image: mysql
+        container_name: hy-mysql-test
+        restart: always
+        ports:
+         - "33069:3306"
+        volumes:
+         - "./mysql/data:/var/lib/mysql"
+         - "./mysql/my.cnf:/etc/mysql/conf.d/my.cnf"
+        environment:
+         - TZ=Asia/Shanghai
+         - MYSQL_ROOT_PASSWORD=root
+         - MYSQL_USER=root
+         - MYSQL_PASS=root
+        command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci 
+        networks:
+         - hf_compose_test
+
+    phpmyadmin-dev:
+        image: phpmyadmin/phpmyadmin
+        container_name: hy-phpmyadmin-test
+        restart: always
+        ports:
+         - "8081:80"
+        environment:
+         - PMA_ARBITRARY=1
+         - MYSQL_USER=root
+         - MYSQL_PASSWORD=root
+         - MYSQL_ROOT_PASSWORD=root
+         - PMA_HOST=mysql-dev
+        depends_on:
+         - mysql-dev
+        networks:
+         - hf_compose_test
+
+    redis-dev:
+        image: redis
+        container_name: hy-redis-test
+        restart: always
+        ports:
+         - "63799:6379"
+        volumes:
+         - "./reids/data:/data"
+         - "./redis/:/redis.conf"
+        environment:
+         - TZ=Asia/Shanghai
+         - LANG=en_US.UTF-8
+        networks:
+         - hf_compose_test
+        command: redis-server --requirepass root --appendonly yes 
+        logging:
+          driver: "json-file"
+          options:
+            max-size: "1m"
+
+    hyperf-dev:
+        container_name: hy-hyperf-test
+        image: hyperf/hyperf:7.2-alpine-cli
+        restart: always
+        ports:
+         - "9501:9501"
+         - "9502:9502"
+        volumes:
+         - "./hyperf:/data"
+        command: /bin/bash -c "wget https://github.com/composer/composer/releases/download/1.8.6/composer.phar && chmod +x ./composer.phar && cp ./composer.phar /usr/local/bin/composer"
+        depends_on:
+         - mysql-dev
+         - redis-dev
+        networks:
+         - hf_compose_test
+networks:
+  hf_compose_test:
